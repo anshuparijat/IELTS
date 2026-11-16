@@ -1,0 +1,64 @@
+name: Render teaching video
+
+on:
+  workflow_dispatch:
+    inputs:
+      narration:
+        description: "Narration text (spoken by Microsoft Andrew US)"
+        required: true
+        type: string
+      slides_directory:
+        description: "Repository folder containing slide images"
+        required: true
+        default: "assets/slides"
+        type: string
+      seconds_per_slide:
+        description: "Seconds per slide"
+        required: true
+        default: "5"
+        type: string
+      watermark:
+        description: "Brand watermark"
+        required: true
+        default: "IELTS WINNERS"
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install FFmpeg
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+
+      - name: Install Python dependencies
+        run: pip install edge-tts==7.2.0
+
+      - name: Render MP4 with Andrew US voice
+        run: |
+          python scripts/render_video.py \
+            --slides "${{ inputs.slides_directory }}" \
+            --narration "${{ inputs.narration }}" \
+            --seconds "${{ inputs.seconds_per_slide }}" \
+            --watermark "${{ inputs.watermark }}" \
+            --output output/ielts-video.mp4
+
+      - name: Upload finished MP4
+        uses: actions/upload-artifact@v4
+        with:
+          name: ielts-video-mp4
+          path: output/ielts-video.mp4
+          if-no-files-found: error
+          retention-days: 7
