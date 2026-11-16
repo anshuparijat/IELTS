@@ -1,11 +1,16 @@
 name: Render teaching video
 
 on:
+  push:
+    paths:
+      - "assets/slides/**"
+      - "assets/narration.txt"
+      - ".github/workflows/render-video.yml"
   workflow_dispatch:
     inputs:
       narration:
-        description: "Narration text (spoken by Microsoft Andrew US)"
-        required: true
+        description: "Optional narration override. Leave blank to use assets/narration.txt."
+        required: false
         type: string
       slides_directory:
         description: "Repository folder containing slide images"
@@ -13,7 +18,7 @@ on:
         default: "assets/slides"
         type: string
       seconds_per_slide:
-        description: "Seconds per slide"
+        description: "Minimum seconds per slide"
         required: true
         default: "5"
         type: string
@@ -46,13 +51,25 @@ jobs:
       - name: Install Python dependencies
         run: pip install edge-tts==7.2.0
 
-      - name: Render MP4 with Andrew US voice
+      - name: Prepare narration
+        env:
+          NARRATION_INPUT: ${{ inputs.narration }}
+        run: |
+          mkdir -p output
+          if [ -n "$NARRATION_INPUT" ]; then
+            printf '%s' "$NARRATION_INPUT" > output/narration.txt
+          else
+            test -s assets/narration.txt
+            cp assets/narration.txt output/narration.txt
+          fi
+
+      - name: Render MP4 with Microsoft Andrew US Neural
         run: |
           python scripts/render_video.py \
-            --slides "${{ inputs.slides_directory }}" \
-            --narration "${{ inputs.narration }}" \
-            --seconds "${{ inputs.seconds_per_slide }}" \
-            --watermark "${{ inputs.watermark }}" \
+            --slides "${{ inputs.slides_directory || 'assets/slides' }}" \
+            --narration "$(cat output/narration.txt)" \
+            --seconds "${{ inputs.seconds_per_slide || '5' }}" \
+            --watermark "${{ inputs.watermark || 'IELTS WINNERS' }}" \
             --output output/ielts-video.mp4
 
       - name: Upload finished MP4
