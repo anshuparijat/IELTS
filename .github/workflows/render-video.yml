@@ -1,30 +1,15 @@
-name: Render teaching video
+name: Render animated GIF lesson
 
 on:
   push:
     paths:
-      - "assets/slides/**"
-      - "assets/incoming/*.zip"
+      - "assets/gifs/**"
   workflow_dispatch:
     inputs:
-      narration:
-        description: "Optional narration override. Leave blank to use assets/narration.txt."
-        required: false
-        type: string
-      slides_directory:
-        description: "Repository folder containing slide images"
+      lesson_folder:
+        description: "Folder under assets/gifs containing GIFs and narration.txt"
         required: true
-        default: "assets/slides"
-        type: string
-      seconds_per_slide:
-        description: "Minimum seconds per slide"
-        required: true
-        default: "20"
-        type: string
-      watermark:
-        description: "Brand watermark"
-        required: true
-        default: "IELTS WINNERS"
+        default: "assets/gifs/lesson"
         type: string
 
 permissions:
@@ -36,6 +21,8 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -50,43 +37,41 @@ jobs:
       - name: Install Python dependencies
         run: pip install edge-tts==7.2.0
 
-      - name: Extract uploaded lesson package
-        if: github.event_name == 'push' && contains(github.event.head_commit.modified, 'assets/incoming/') || github.event_name == 'push' && contains(github.event.head_commit.added, 'assets/incoming/')
-        run: |
-          package=$(find assets/incoming -maxdepth 1 -type f -name '*.zip' | sort | tail -n 1)
-          test -n "$package"
-          rm -rf assets/slides
-          mkdir -p assets/slides
-          unzip -o "$package" -d /tmp/lesson-package
-          find /tmp/lesson-package -type f \\( -iname '*.png' -o -iname '*.jpg' -o -iname '*.jpeg' -o -iname '*.webp' \\) -print0 | sort -z | while IFS= read -r -d '' file; do cp "$file" "assets/slides/$(basename "$file")"; done
-          if [ -f /tmp/lesson-package/narration.txt ]; then cp /tmp/lesson-package/narration.txt assets/narration.txt; fi
-          test -n "$(find assets/slides -type f | head -n 1)"
-
-      - name: Prepare narration
+      - name: Identify lesson folder
+        id: lesson
         env:
-          NARRATION_INPUT: ${{ inputs.narration }}
+          MANUAL_FOLDER: ${{ inputs.lesson_folder }}
+        run: |
+          if [ -n "$MANUAL_FOLDER" ]; then
+            folder="$MANUAL_FOLDER"
+          else
+            changed=$(git diff-tree --no-commit-id --name-only -r "$GITHUB_SHA" | grep -E '^assets/gifs/.+\\.gif$' | head -n 1 || true)
+            test -n "$changed" || { echo "No GIF slide was added or changed in this commit."; exit 1; }
+            folder=$(dirname "$changed")
+          fi
+          echo "folder=$folder" >> "$GITHUB_OUTPUT"
+          echo "Rendering lesson from $folder"
+
+      - name: Validate lesson package
+        run: |
+          test -d "${{ steps.lesson.outputs.folder }}"
+          test -s "${{ steps.lesson.outputs.folder }}/narration.txt"
+          count=$(find "${{ steps.lesson.outputs.folder }}" -maxdepth 1 -type f -iname '*.gif' | wc -l)
+          test "$count" -gt 0
+          echo "Found $count GIF slides."
+
+      - name: Render MP4 with slide-matched Microsoft Andrew US Neural narration
         run: |
           mkdir -p output
-          if [ -n "$NARRATION_INPUT" ]; then
-            printf '%s' "$NARRATION_INPUT" > output/narration.txt
-          else
-            test -s assets/narration.txt
-            cp assets/narration.txt output/narration.txt
-          fi
-
-      - name: Render MP4 with Microsoft Andrew US Neural
-        run: |
           python scripts/render_video.py \
-            --slides "${{ inputs.slides_directory || 'assets/slides' }}" \
-            --narration "$(cat output/narration.txt)" \
-            --seconds "${{ inputs.seconds_per_slide || '20' }}" \
-            --watermark "${{ inputs.watermark || 'IELTS WINNERS' }}" \
+            --slides "${{ steps.lesson.outputs.folder }}" \
+            --narration-file "${{ steps.lesson.outputs.folder }}/narration.txt" \
             --output output/ielts-video.mp4
 
       - name: Upload finished MP4
         uses: actions/upload-artifact@v4
         with:
-          name: ielts-video-mp4
+          name: ielts-gif-lesson-mp4
           path: output/ielts-video.mp4
           if-no-files-found: error
           retention-days: 7
