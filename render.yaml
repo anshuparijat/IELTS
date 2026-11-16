@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: ielts-ai-video-renderer
+    runtime: docker
+    plan: starter
+    healthCheckPath: /health
+    envVars:
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: OUTPUT_DIR
+        value: /var/data/outputs
