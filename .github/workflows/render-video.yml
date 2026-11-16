@@ -4,8 +4,6 @@ on:
   push:
     paths:
       - "assets/slides/**"
-      - "assets/narration.txt"
-      - ".github/workflows/render-video.yml"
   workflow_dispatch:
     inputs:
       narration:
