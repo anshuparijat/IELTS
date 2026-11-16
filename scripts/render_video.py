@@ -45,7 +45,7 @@ def main():
     if not narration_path.is_file():
         raise SystemExit(f"Missing per-slide narration file: {narration_path}")
     raw = narration_path.read_text(encoding="utf-8")
-    blocks = [b.strip() for b in raw.split("\\n---\\n") if b.strip()]
+    blocks = [b.strip() for b in raw.split("\n---\n") if b.strip()]
     if len(blocks) != len(gifs):
         raise SystemExit(f"Found {len(gifs)} GIFs but {len(blocks)} narration blocks. Add exactly one block per GIF, separated by a line containing ---.")
 
@@ -68,7 +68,7 @@ def main():
                        "pad=1080:1920:(ow-iw)/2:(oh-ih)/2:color=white,fps=30,format=yuv420p",
                 "-map", "0:v:0", "-map", "1:a:0",
                 "-c:v", "libx264", "-preset", "veryfast",
-                "-c:a", "aac", "-b:a", "192k", "-shortest",
+                "-c:a", "aac", "-b:a", "192k",
                 str(segment)
             ])
             segments.append(segment)
