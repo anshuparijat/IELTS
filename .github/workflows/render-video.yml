@@ -20,7 +20,7 @@ on:
       seconds_per_slide:
         description: "Minimum seconds per slide"
         required: true
-        default: "5"
+        default: "20"
         type: string
       watermark:
         description: "Brand watermark"
@@ -68,7 +68,7 @@ jobs:
           python scripts/render_video.py \
             --slides "${{ inputs.slides_directory || 'assets/slides' }}" \
             --narration "$(cat output/narration.txt)" \
-            --seconds "${{ inputs.seconds_per_slide || '5' }}" \
+            --seconds "${{ inputs.seconds_per_slide || '20' }}" \
             --watermark "${{ inputs.watermark || 'IELTS WINNERS' }}" \
             --output output/ielts-video.mp4
 
