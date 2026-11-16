@@ -220,7 +220,7 @@ async def render_video(
                     response_format="mp3",
                 )
                 audio_path = temp / "narration.mp3"
-                speech.write_to_file(audio_path)
+                speech.stream_to_file(audio_path)
             except Exception as exc:
                 raise HTTPException(502, f"Narration generation failed: {str(exc)[:500]}") from exc
 
