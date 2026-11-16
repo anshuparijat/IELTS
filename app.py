@@ -207,22 +207,17 @@ async def render_video(
             audio_path = temp / f"narration{audio_suffix}"
             audio_path.write_bytes(audio_data)
         elif narration_text.strip():
-            api_key = os.getenv("OPENAI_API_KEY")
-            if not api_key:
-                raise HTTPException(400, "Set OPENAI_API_KEY on the server or upload narration audio.")
             try:
-                from openai import OpenAI
-                client = OpenAI(api_key=api_key)
-                speech = client.audio.speech.create(
-                    model="gpt-4o-mini-tts",
-                    voice="alloy",
-                    input=narration_text.strip()[:4000],
-                    response_format="mp3",
-                )
+                import asyncio
+                import edge_tts
                 audio_path = temp / "narration.mp3"
-                speech.stream_to_file(audio_path)
+                communicate = edge_tts.Communicate(
+                    narration_text.strip()[:4000],
+                    voice="en-US-AndrewNeural",
+                )
+                asyncio.run(communicate.save(str(audio_path)))
             except Exception as exc:
-                raise HTTPException(502, f"Narration generation failed: {str(exc)[:500]}") from exc
+                raise HTTPException(502, f"Andrew US narration generation failed: {str(exc)[:500]}") from exc
 
         final_path = OUTPUT_DIR / f"ielts-video-{job_id}.mp4"
         if audio_path:
