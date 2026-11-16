@@ -4,6 +4,7 @@ on:
   push:
     paths:
       - "assets/slides/**"
+      - "assets/incoming/*.zip"
   workflow_dispatch:
     inputs:
       narration:
@@ -48,6 +49,18 @@ jobs:
 
       - name: Install Python dependencies
         run: pip install edge-tts==7.2.0
+
+      - name: Extract uploaded lesson package
+        if: github.event_name == 'push' && contains(github.event.head_commit.modified, 'assets/incoming/') || github.event_name == 'push' && contains(github.event.head_commit.added, 'assets/incoming/')
+        run: |
+          package=$(find assets/incoming -maxdepth 1 -type f -name '*.zip' | sort | tail -n 1)
+          test -n "$package"
+          rm -rf assets/slides
+          mkdir -p assets/slides
+          unzip -o "$package" -d /tmp/lesson-package
+          find /tmp/lesson-package -type f \\( -iname '*.png' -o -iname '*.jpg' -o -iname '*.jpeg' -o -iname '*.webp' \\) -print0 | sort -z | while IFS= read -r -d '' file; do cp "$file" "assets/slides/$(basename "$file")"; done
+          if [ -f /tmp/lesson-package/narration.txt ]; then cp /tmp/lesson-package/narration.txt assets/narration.txt; fi
+          test -n "$(find assets/slides -type f | head -n 1)"
 
       - name: Prepare narration
         env:
