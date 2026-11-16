@@ -1,26 +1,25 @@
 # IELTS AI Video Renderer
 
-A private-workflow foundation for producing vertical 9:16 teaching videos from uploaded slides, narration, and visual instructions.
+A GitHub-based teaching-video renderer for slide images and spoken narration.
 
-## Planned workflow
+## Voice
 
-1. Upload slide images and narration (or provide narration text).
-2. Configure video size, slide timing, captions, and visual annotations.
-3. Render an MP4 using FFmpeg.
-4. Return a downloadable MP4 from the renderer interface.
+Narration uses Microsoft Edge text-to-speech voice **Andrew (US)**, voice ID `en-US-AndrewNeural`. No OpenAI API key is required for this voice. It uses the Edge TTS service over the network.
 
-## Architecture
+## Render through GitHub Actions
 
-- **FastAPI**: upload and render interface/API.
-- **FFmpeg**: video assembly and encoding.
-- **Pillow**: image preparation and text overlays.
-- **OpenAI API (optional)**: text-to-speech when an API key is configured.
-- **Render**: hosts the web renderer.
-- **GitHub**: source control and deployment workflow.
+1. Add slide images to `assets/slides/` in the order you want them shown. Use filenames such as `01-intro.png`, `02-chart.png`, `03-summary.png`.
+2. Open the repository's **Actions** tab.
+3. Select **Render teaching video**.
+4. Choose **Run workflow**.
+5. Enter the narration, slide folder, seconds per slide and watermark.
+6. When the workflow finishes, open the run and download the `ielts-video-mp4` artifact.
 
-## Current status
+The GitHub Actions renderer outputs a vertical 9:16 MP4 (1080 × 1920) with Andrew US narration.
 
-This repository is the application foundation. The next implementation milestone is the upload/render interface and MP4 download endpoint.
+## Web renderer
+
+The FastAPI application in `app.py` also supports slide uploads, uploaded narration audio, generated Andrew US narration, and an MP4 download response.
 
 ## Local development
 
@@ -35,15 +34,6 @@ uvicorn app:app --reload
 
 Open http://127.0.0.1:8000.
 
-## Environment variables
+## Output and delivery
 
-- `OPENAI_API_KEY` (optional): enables generated narration through the OpenAI API. A ChatGPT subscription does not include API credits.
-- `OUTPUT_DIR` (optional): output directory; defaults to `outputs`.
-
-## Deployment
-
-A `render.yaml` blueprint is included. Configure the optional `OPENAI_API_KEY` as a secret in the hosting provider dashboard. Do not commit API keys, passwords, or tokens.
-
-## Important download behaviour
-
-The renderer's web interface will expose a direct MP4 download endpoint. A GitHub Actions artifact is a separate download mechanism; it does not automatically become an attachment in a ChatGPT conversation.
+GitHub Actions stores each completed MP4 as a downloadable workflow artifact for 7 days. This is a GitHub download, not an automatic ChatGPT conversation attachment. Direct attachment delivery into ChatGPT requires a separate supported file-transfer integration.
